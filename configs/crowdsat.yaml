@@ -1,0 +1,74 @@
+project: 'crowd detection using very-fine-resolution satellite imagery'
+author: 'Tong Xiao, Tongji University, email:2311677@tongji.edu.cn, welcome to contact me!'
+
+seed: 9527
+device_name: 'cuda'
+
+work_dir: 'D:\PHD_learning\crowd_recognition\datasets\google_driver_satellite_update\work_test'
+log_path: 'log'
+output: 'output'
+
+model:
+  name: 'CrowdSat-Net'
+  from_torchvision: False
+  load_from: null
+  resume_from: null
+  kwargs:
+    num_layers: 104
+    pretrained: False
+    down_ratio: 2
+    head_conv: 64
+  freeze: null
+
+datasets:
+  img_size: [256, 256]
+  anno_type: 'point'
+  num_classes: 2
+  collate_fn: null
+
+train:
+
+  name: 'CrowdDataset'
+  data_root: '../data/crowdsat'
+
+  albu_transforms:
+    Normalize:
+      p: 1.0
+
+  end_transforms:
+    MultiTransformsWrapper:
+      FIDT:
+        num_classes: 2
+        down_ratio: 2
+      PointsToMask:
+        radius: 2
+        num_classes: 2
+        squeeze: True
+        down_ratio: 2
+
+  validate:
+    albu_transforms:
+      Normalize:
+        p: 1.0
+
+    end_transforms:
+      DownSample:
+        down_ratio: 2
+        crowd_type: 'point'
+
+training_settings:
+  batch_size: 1
+  optimizer: 'adam'
+  lr: 3e-4
+  weight_decay: 1e-3
+  print_freq: 10
+  epochs: 150
+
+val_settings:
+  batch_size: 1
+  select_mode: 'max'
+  validate_on: 'f1_score'
+  checkpoint: 'best'
+  lmds_kwargs:
+    kernel_size: [3,3]
+    adapt_ts: 0.1
