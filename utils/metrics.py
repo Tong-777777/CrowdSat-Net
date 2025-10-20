@@ -445,8 +445,8 @@ class PointsMetrics(Metrics):
                 Defaults to 2 (binary case).
         '''
         super().__init__(threshold=radius, num_classes=num_classes)
-        self.current_tp = []  # 存储当前批次的TP坐标（预测点）
-        self.current_fp = []  # 存储当前批次的FP坐标（预测点）
+        self.current_tp = []
+        self.current_fp = []
         self.current_fn = []
 
     def matching(self, gt: dict, preds: dict) -> None:
@@ -472,18 +472,14 @@ class PointsMetrics(Metrics):
         y_true = [gt['labels'][k] for k, d, i in filter_match_gt]
         y_pred = [preds['labels'][i] for k, d, i in filter_match_gt]
 
-        # 记录当前批次的 TP/FP/FN
         self.current_tp = []
         self.current_fp = []
         self.current_fn = []
 
-        # 获取所有预测点中匹配的索引
         matched_pred_indices = [i for _, _, i in filter_match_gt]
-        # TP坐标：预测点中被匹配的点
         self.current_tp = [preds['loc'][i] for i in matched_pred_indices]
-        # FP坐标：预测点中未被匹配的点
         self.current_fp = [p for idx, p in enumerate(preds['loc']) if idx not in matched_pred_indices]
-        # FN坐标：真值点中未被匹配的点
+  
         matched_gt_indices = [k for k, _, _ in filter_match_gt]
         self.current_fn = [p for idx, p in enumerate(gt['loc']) if idx not in matched_gt_indices]
 
