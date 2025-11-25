@@ -17,7 +17,7 @@ from utils.loss import FocalLoss
 from utils.seed import set_seed
 from torch import Tensor
 from torch.nn import CrossEntropyLoss
-from model import LossWrapper, CrowdSatNet, load_model
+from model import LossWrapper, CRVHR, load_model
 from torch.optim import Adam, AdamW
 from torch.utils.data import DataLoader
 from utils.logger import *
@@ -32,8 +32,8 @@ warnings.filterwarnings("ignore", category=UserWarning, module="albumentations")
 
 
 def get_args_parser():
-    parser = argparse.ArgumentParser('Set parameters for Testing CrowdSat-Net', add_help=False)
-    parser.add_argument("--config", default="./configs/crowdsat.yaml", help="Path to the config file (yaml type)")
+    parser = argparse.ArgumentParser('Set parameters for Testing CDVHR', add_help=False)
+    parser.add_argument("--config", default="./configs/cdvhr.yaml", help="Path to the config file (yaml type)")
 
     return parser.parse_args()
 
@@ -54,27 +54,29 @@ def main(args):
 
     logger_path = os.path.join(cfg["work_dir"], cfg["output"])
     os.makedirs(logger_path, exist_ok=True)
-    prediction_visual = os.path.join(logger_path, 'prediction_visual')
-    os.makedirs(prediction_visual, exist_ok=True)
-    evaluation_visual = prediction_visual.replace('prediction_visual', 'evaluation_visual')
-    os.makedirs(evaluation_visual, exist_ok=True)
+    img_visual = os.path.join(logger_path, 'img_visual')
+    os.makedirs(img_visual, exist_ok=True)
+    img_visual_new = img_visual.replace('img_visual', 'img_visual_new')
+    os.makedirs(img_visual_new, exist_ok=True)
 
     logger, curr_timestr = setup_default_logging("global", logger_path)
     logger.info("{}".format(pprint.pformat(cfg)))
 
     csv_path = os.path.join(logger_path, "each_image_information.csv")
     file = open(csv_path, 'w', newline="")
-
+    # 2.
     writer = csv.writer(file)
+
     writer.writerow(['ID', 'gt', 'P', 'R', 'F1', 'TP', 'FP', 'FN'])
 
     ###########################
     # 2. model preparation
     ###########################
-    model = CrowdSatNet(num_classes=cfg["datasets"]["num_classes"])
+    model = CRVHR(num_classes=cfg["datasets"]["num_classes"])
     model.to(device)
 
     model = LossWrapper(model, mode='preds_only')
+
 
     ###########################
     # 3. datasets preparation
@@ -86,6 +88,7 @@ def main(args):
         end_transforms=[DownSample(down_ratio=cfg["train"]["validate"]["end_transforms"]["DownSample"]["down_ratio"],
                                    crowd_type=cfg["train"]["validate"]["end_transforms"]["DownSample"]["crowd_type"])]
     )
+
 
     test_dataloader = DataLoader(
         dataset=test_set,
@@ -105,7 +108,6 @@ def main(args):
 
     metrics.flush()
     iter_metrics = metrics.copy()
-
 
     logger.info('-------------------------- start testing --------------------------')
     model.eval()
@@ -135,7 +137,9 @@ def main(args):
             scores=scores[0],
         )
 
-        iter_metrics.feed(**dict(gt=gt, preds=preds))
+        est_count = [float(counts[0][0])]
+
+        iter_metrics.feed(gt=gt, preds=preds, est_count=est_count)
 
         f1 = round(iter_metrics.fbeta_score(), 5)
         precision = round(iter_metrics.precision(), 5)
@@ -150,69 +154,71 @@ def main(args):
         iter_metrics.aggregate()
 
         iter_metrics.flush()
-        metrics.feed(**dict(gt=gt, preds=preds))
+        metrics.feed(gt=gt, preds=preds, est_count=est_count)
 
-        # save prediction results
         img_raw = Image.open(targets['img_path'][0]).convert('RGB')
         img_to_draw = cv2.cvtColor(np.array(img_raw), cv2.COLOR_RGB2BGR)
         img_to_draw_new = img_to_draw.copy()
         for pi in locs[0]:
             img_to_draw = cv2.circle(img_to_draw, (int(pi[1])*2, int(pi[0])*2), 2, (0, 0, 255), -1)
-        cv2.imwrite(os.path.join(prediction_visual, image_index[0] + '_pred{}.png'.format(len(locs[0]))),
+        cv2.imwrite(os.path.join(img_visual, image_index[0] + 'pred{}.png'.format(len(locs[0]))),
                     img_to_draw)
 
-        # save evaluation results
-        scale_factor = 2
+        scale_factor = 2  # 根据下采样比例调整
 
-        draw_configs = [
-            (tp_points, cv2.circle, {
-                "radius": 4,
-                "color": (255, 255, 0),
-                "thickness": -1
-            }),
-            (fp_points, cv2.circle, {
-                "radius": 4,
-                "color": (255, 0, 255),
-                "thickness": 2
-            }),
-            (fn_points, cv2.drawMarker, {
-                "color": (0, 255, 255),
-                "markerType": cv2.MARKER_CROSS,
-                "markerSize": 8,
-                "thickness": 2
-            })
-        ]
+        for point in tp_points:
+            x = int(point[1] * scale_factor)
+            y = int(point[0] * scale_factor)
+            cv2.circle(img_to_draw_new, (x, y), radius=4, color=(255, 255, 0), thickness=-1)
 
-        for points, draw_func, params in draw_configs:
-            for point in points:
+        for point in fp_points:
+            x = int(point[1] * scale_factor)
+            y = int(point[0] * scale_factor)
+            cv2.circle(img_to_draw_new, (x, y), radius=4, color=(255, 0, 255), thickness=2)
 
-                scaled_x = int(point[1] * scale_factor)
-                scaled_y = int(point[0] * scale_factor)
+        for point in fn_points:
+            x = int(point[1] * scale_factor)
+            y = int(point[0] * scale_factor)
+            cv2.drawMarker(img_to_draw_new, (x, y), color=(0, 255, 255),
+                           markerType=cv2.MARKER_CROSS, markerSize=8, thickness=2)
+
+        cv2.imwrite(os.path.join(img_visual_new, image_index[0] + f'_eva.png'), img_to_draw_new)
 
 
-                draw_func(
-                    img_to_draw_new,
-                    (scaled_x, scaled_y),
-                    ** params
-                )
-
-
-        cv2.imwrite(os.path.join(evaluation_visual, image_index[0] + f'_eva.png'), img_to_draw_new)
-
+    mAP = np.mean([metrics.ap(c) for c in range(1, metrics.num_classes)]).item()
 
     metrics.aggregate()
 
     recall = metrics.recall()
     precision = metrics.precision()
     f1_score = metrics.fbeta_score()
+    accuracy = metrics.accuracy()
+
+    mae = metrics.mae()
+    rmse = metrics.rmse()
+
+    mle = metrics.mle()
 
     tmp_results = {
         'f1_score': f1_score,
         'recall': recall,
         'precision': precision,
+        'accuracy': accuracy,
+        "mAP": mAP,
+        'mae': mae,
+        "rmse": rmse,
+        'mle': mle
     }
 
-    print(tmp_results)
+    # print(tmp_results)
+
+    # ---------- NEW: save tmp_results to txt ----------
+    results_txt_path = os.path.join(logger_path, "overall_results.txt")
+    with open(results_txt_path, "w") as f:
+        for k, v in tmp_results.items():
+            f.write(f"{k}: {v}\n")
+
+
 
 
 if __name__ == '__main__':
