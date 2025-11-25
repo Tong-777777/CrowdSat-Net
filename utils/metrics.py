@@ -62,6 +62,10 @@ class Metrics:
         self._total_calls = 0
         self._total_count = self._init_attr()
 
+
+        self._sum_mle = self._init_attr()
+        self._n_tp_mle = self._init_attr()
+
         self._ap_tables = self._init_attr(val=[])
 
         self.confusion_matrix = numpy.zeros((self.num_classes-1,self.num_classes-1))
@@ -147,6 +151,9 @@ class Metrics:
         self._total_calls = 0
         self._total_count = self._init_attr()
 
+        self._sum_mle = self._init_attr()
+        self._n_tp_mle = self._init_attr()
+
         self._ap_tables = self._init_attr(val=[])
 
         self.confusion_matrix = numpy.zeros((self.num_classes-1,self.num_classes-1))
@@ -171,6 +178,11 @@ class Metrics:
         self._confusion_matrix = numpy.array([[1.]])
         self._total_count = [sum(self._total_count)]
 
+        agg_sum_mle = sum(self._sum_mle)
+        agg_n_tp_mle = sum(self._n_tp_mle)
+        self._sum_mle = [agg_sum_mle]
+        self._n_tp_mle = [agg_n_tp_mle]
+
     def precision(self, c: int = 1) -> float:
         ''' Precision
         Args:
@@ -184,6 +196,17 @@ class Metrics:
             return float(self.tp[c] / (self.tp[c] + self.fp[c]))
         else:
             return float(0)
+
+    def mle(self, c: int = 1) -> float:
+        ''' Mean Localization Error (average distance over true positives)
+        Args:
+            c (int, optional): class id. Defaults to 1.
+
+        Returns:
+            float
+        '''
+        c = c - 1
+        return float(self._sum_mle[c] / self._n_tp_mle[c]) if self._n_tp_mle[c] else 0.
 
     def recall(self, c: int = 1) -> float:
         ''' Recall
@@ -445,8 +468,8 @@ class PointsMetrics(Metrics):
                 Defaults to 2 (binary case).
         '''
         super().__init__(threshold=radius, num_classes=num_classes)
-        self.current_tp = []
-        self.current_fp = []
+        self.current_tp = []  # 存储当前批次的TP坐标（预测点）
+        self.current_fp = []  # 存储当前批次的FP坐标（预测点）
         self.current_fn = []
 
     def matching(self, gt: dict, preds: dict) -> None:
@@ -477,9 +500,11 @@ class PointsMetrics(Metrics):
         self.current_fn = []
 
         matched_pred_indices = [i for _, _, i in filter_match_gt]
+
         self.current_tp = [preds['loc'][i] for i in matched_pred_indices]
+
         self.current_fp = [p for idx, p in enumerate(preds['loc']) if idx not in matched_pred_indices]
-  
+
         matched_gt_indices = [k for k, _, _ in filter_match_gt]
         self.current_fn = [p for idx, p in enumerate(gt['loc']) if idx not in matched_gt_indices]
 
@@ -497,6 +522,10 @@ class PointsMetrics(Metrics):
             self.tp[c-1] += tp
             self.fp[c-1] += (n_pred - tp)
             self.fn[c-1] += (n_gt - tp)
+
+            sum_dist_c = sum(d for d, _ in lab_match)
+            self._sum_mle[c - 1] += sum_dist_c
+            self._n_tp_mle[c - 1] += tp
 
             if self.score_flag:
                 tp_ids = [i for d, i in lab_match]
