@@ -34,7 +34,7 @@ Localization performance on the CrowdSat dataset.
 ## Running CrowdSat-Net
 ### Prepare datasets
 Please download the CrowdSat dataset, and set up the path to them properly in the configuration files.
-- CrowdSat:[Google Driver](https://drive.google.com/drive/folders/1YQoCApNRZn1KtXkF_sITYKlmpAG-s3sF?usp=drive_link) | [Baidu Driver](https://pan.baidu.com/s/1p26QmmYSeYjNwPGeWEedkg?pwd=9527)
+- CrowdSat: the dataset will be available soon.
 > Notes: There are two versions, one is the original dataset, the other is the enhancement dataset by three augmentation methods, i.e., horizontal flipping, vertical flipping and CutMix. In this experiment, we used the enhancement dataset.
 
 Then, using the **./scripts/generate_list.py** to generate the corresponding list files, which is adopted as follows:
@@ -77,5 +77,14 @@ Before running the **demo.py**, please download the [checkpoint](https://drive.g
 If you find these projects useful, please consider citing:
 
 ```bibtex
+@misc{xiao2025crowdsat,
+      title={Crowd Detection Using Very-Fine-Resolution Satellite Imagery}, 
+      author={Tong Xiao and Qunming Wang and Ping Lu and Tenghai Huang and Xiaohua Tong and Peter M. Atkinson},
+      year={2025},
+      eprint={2504.19546},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2504.19546}, 
+}
 
 ```
