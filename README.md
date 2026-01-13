@@ -77,14 +77,14 @@ Before running the **demo.py**, please download the [checkpoint](https://drive.g
 If you find these projects useful, please consider citing:
 
 ```bibtex
-@misc{xiao2025crowdsat,
-      title={Crowd Detection Using Very-Fine-Resolution Satellite Imagery}, 
-      author={Tong Xiao and Qunming Wang and Ping Lu and Tenghai Huang and Xiaohua Tong and Peter M. Atkinson},
-      year={2025},
-      eprint={2504.19546},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV},
-      url={https://arxiv.org/abs/2504.19546}, 
+@article{XIAO2026787,
+title = {Crowd detection using Very-Fine-Resolution satellite imagery},
+journal = {ISPRS Journal of Photogrammetry and Remote Sensing},
+volume = {232},
+pages = {787-809},
+year = {2026},
+issn = {0924-2716},
+doi = {https://doi.org/10.1016/j.isprsjprs.2026.01.001},
 }
 
 ```
