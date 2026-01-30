@@ -33,9 +33,7 @@ Localization performance on the CrowdSat dataset.
 
 ## Running CrowdSat-Net
 ### Prepare datasets
-Please download the CrowdSat dataset, and set up the path to them properly in the configuration files.
-- CrowdSat: the dataset will be available soon.
-> Notes: There are two versions, one is the original dataset, the other is the enhancement dataset by three augmentation methods, i.e., horizontal flipping, vertical flipping and CutMix. In this experiment, we used the enhancement dataset.
+- CrowdSat: (commercial imagery; not publicly redistributable): Due to licensing restrictions of the commercial satellite imagery, we cannot release the raw CrowdSat dataset publicly.
 
 Then, using the **./scripts/generate_list.py** to generate the corresponding list files, which is adopted as follows:
 
