@@ -77,6 +77,7 @@ If you find these projects useful, please consider citing:
 ```bibtex
 @article{XIAO2026787,
 title = {Crowd detection using Very-Fine-Resolution satellite imagery},
+author = {Tong Xiao and Qunming Wang and Ping Lu and Tenghai Huang and Xiaohua Tong and Peter M. Atkinson},
 journal = {ISPRS Journal of Photogrammetry and Remote Sensing},
 volume = {232},
 pages = {787-809},
